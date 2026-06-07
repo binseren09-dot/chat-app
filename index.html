@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Chat App</title>
+
+  <style>
+body {
+  font-family: Arial, sans-serif;
+  /* Menggunakan URL Unsplash yang stabil agar background tidak hilang lagi */
+  background-image: url('https://unsplash.com');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   TAMPILAN DEFAULT (UNTUK PC / LAYAR BESAR)
+   ========================================== */
+.chat-box {
+  width: 450px;       /* Sedikit lebih lebar di PC agar lega saat ada foto/video */
+  height: 80vh;       /* Tinggi fleksibel berdasarkan ukuran layar browser */
+  max-height: 700px;  /* Batas tinggi maksimal di PC */
+  background: rgba(255, 255, 255, 0.95); /* Efek agak transparan elegan */
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column; /* Menyusun elemen dari atas ke bawah */
+  overflow: hidden;
+}
+
+.header {
+  background: #1877f2;
+  color: white;
+  padding: 15px;
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+#username {
+  margin: 10px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#messages {
+  flex: 1;            /* Mengisi seluruh ruang kosong yang tersedia */
+  overflow-y: auto;
+  padding: 15px;
+  background: #f0f2f5;
+}
+
+.message {
+  background: white;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 85%;    /* Agar balon chat tidak terlalu melebar penuh */
+  width: fit-content;
+}
+
+/* Memposisikan teks nama dan bubble chat */
+.message-content {
+  flex: 1;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+/* Pembungkus foto dan video agar ukurannya responsif */
+.message-content img, 
+.message-content video {
+  max-width: 100%;    /* Mengikuti lebar balon chat, maksimal 200px */
+  width: 200px;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 5px;
+  display: block;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 5px;
+  margin-left: 10px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-delete:hover {
+  opacity: 1;
+}
+
+.input-area {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  background: white;
+  align-items: center;
+  flex-shrink: 0;
+  border-top: 1px solid #eee;
+}
+
+#msg {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+}
+
+#msg:focus {
+  border-color: #1877f2;
+}
+
+button {
+  background: #1877f2;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.btn-attach {
+  background: #e4e6eb;
+  color: #050505;
+  font-size: 18px;
+  padding: 10px 14px;
+  border-radius: 50%; /* Membuat tombol klip kertas menjadi bulat saklar */
+}
+
+/* ==========================================
+   KODE KHUSUS UNTUK HP (LAYAR KECIL < 600px)
+   ========================================== */
+@media (max-width: 600px) {
+  body {
+    padding: 0; /* Menghilangkan jarak di tepi layar HP */
+  }
+
+  .chat-box {
+    width: 100%;       /* Kotak chat melebar penuh seukuran layar HP */
+    height: 100vh;     /* Tinggi penuh satu layar HP */
+    max-height: 100vh;
+    border-radius: 0;  /* Menghilangkan lengkungan sudut agar rapi di HP */
+  }
+
+  .header {
+    padding: 12px 15px;
+    font-size: 18px;
+  }
+
+  #messages {
+    padding: 10px;     /* Area chat sedikit lebih padat di HP */
+  }
+
+  .message {
+    max-width: 90%;    /* Balon chat boleh sedikit lebih lebar di HP */
+  }
+
+  .message-content img, 
+  .message-content video {
+    width: 160px;      /* Ukuran preview foto/video sedikit dikecilkan di HP */
+  }
+
+  .input-area {
+    padding: 8px 10px; /* Area ketik lebih ramping agar ruang chat lebih luas */
+    padding-bottom: env(safe-area-inset-bottom, 10px); /* Menghindari area notch/navigation bar di HP modern */
+  }
+  
+  #msg, button, .btn-attach {
+    font-size: 16px;   /* Memperbesar ukuran teks input agar nyaman diketik di HP */
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+  <div class="chat-box">
+    <div class="header">
+      💬 Chat App
+    </div>
+
+    <input
+      id="username"
+      placeholder="Username"
+      oninput="renderDeleteButtons()"
+    >
+
+    <div id="messages"></div>
+
+    <div class="input-area">
+      <!-- INPUT FILE TERSEMBUNYI -->
+      <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect()">
+      
+      <!-- TOMBOL KLIP KERTAS -->
+      <button class="btn-attach" onclick="document.getElementById('file-input').click()">📎</button>
+
+      <input
+        id="msg"
+        placeholder="Ketik pesan..."
+      >
+
+      <button onclick="sendMsg()">
+        ➤
+      </button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+
+    // 1. Muat Pesan Lama Saat Halaman Dibuka
+    fetch('/messages')
+      .then(res => res.json())
+      .then(messages => {
+        messages.forEach(data => {
+          appendMessageElement(data);
+        });
+        scrollToBottom();
+        renderDeleteButtons();
+      });
+
+    // 2. Fungsi Membuat Struktur Pesan (Teks / Foto / Video)
+    function appendMessageElement(data) {
+      let div = document.createElement('div');
+      div.className = "message";
+      div.setAttribute('id', `msg-${data._id}`);
+      div.setAttribute('data-sender', data.username);
+
+      let contentSpan = document.createElement('span');
+      contentSpan.className = "message-content";
+      
+      let htmlContent = `<b>${data.username}:</b> `;
+      if (data.message) {
+        htmlContent += `${data.message}`;
+      }
+
+      // RENDER FOTO / VIDEO JIKA ADA LINKNYA
+      if (data.fileUrl) {
+        if (data.message) htmlContent += `<br>`;
+        if (data.fileType === 'video') {
+          htmlContent += `<video src="${data.fileUrl}" controls style="max-width: 200px; border-radius: 10px; margin-top: 5px;"></video>`;
+        } else {
+          htmlContent += `<img src="${data.fileUrl}" style="max-width: 200px; border-radius: 10px; margin-top: 5px;" alt="Media">`;
+        }
+      }
+      
+      contentSpan.innerHTML = htmlContent;
+      div.appendChild(contentSpan);
+
+      // Membuat Tombol Hapus (Dinamis)
+      let currentUsername = document.getElementById('username').value.trim();
+      if (currentUsername && data.username === currentUsername) {
+        let deleteBtn = document.createElement('button');
+        deleteBtn.className = "btn-delete";
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.onclick = function() {
+          emitDelete(data._id, data.username);
+        };
+        div.appendChild(deleteBtn);
+      }
+
+      document.getElementById('messages').appendChild(div);
+    }
+
+    // 3. Kirim Pesan Teks Biasa
+    function sendMsg() {
+      let username = document.getElementById('username').value.trim();
+      let msg = document.getElementById('msg').value.trim();
+
+      if(username === "") {
+        alert("Isi username terlebih dahulu");
+        return;
+      }
+      if(msg === "") return;
+
+      socket.emit('chat message', {
+        username: username,
+        message: msg
+      });
+
+      document.getElementById('msg').value = "";
+    }
+
+    // 4. Handle Upload File Foto/Video
+    function handleFileSelect() {
+      let fileInput = document.getElementById('file-input');
+      let username = document.getElementById('username').value.trim();
+
+      if (username === "") {
+        alert("Isi username terlebih dahulu sebelum memilih file");
+        fileInput.value = "";
+        return;
+      }
+      if (fileInput.files.length === 0) return;
+
+      let file = fileInput.files[0];
+      let formData = new FormData();
+      formData.append('mediaFile', file);
+
+      // Indikator Loading Sementara
+      document.getElementById('msg').placeholder = "Sedang mengunggah... ⏳";
+      document.getElementById('msg').disabled = true;
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(result => {
+        document.getElementById('msg').placeholder = "Ketik pesan...";
+        document.getElementById('msg').disabled = false;
+        
+        if(result.fileUrl) {
+          // Kirim detail file media lewat Socket.io ke database & user lain
+          socket.emit('chat message', {
+            username: username,
+            message: "", 
+            fileUrl: result.fileUrl,
+            fileType: result.fileType
+          });
+        }
+        fileInput.value = ""; 
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('msg').placeholder = "Ketik pesan...";
+        document.getElementById('msg').disabled = false;
+        alert("Gagal mengunggah media.");
+        fileInput.value = "";
+      });
+    }
+
+    // 5. Sinyal Pesan Baru Masuk
+    socket.on('chat message', (data) => {
+      appendMessageElement(data);
+      scrollToBottom();
+    });
+
+    // 6. Sinyal Kirim Perintah Hapus ke Server
+    function emitDelete(messageId, username) {
+      if(confirm("Apakah Anda yakin ingin menghapus pesan ini?")) {
+        socket.emit('delete message', { messageId, username });
+      }
+    }
+
+    // 7. Sinyal Sinkronisasi Hapus dari Server (Real-time)
+    socket.on('message deleted', (messageId) => {
+      let msgElement = document.getElementById(`msg-${messageId}`);
+      if (msgElement) {
+        msgElement.remove();
+      }
+    });
+
+    // 8. Atur Tombol Sampah Sesuai Input Username
+    function renderDeleteButtons() {
+      let currentUsername = document.getElementById('username').value.trim();
+      let allMessages = document.querySelectorAll('.message');
+
+      allMessages.forEach(msgDiv => {
+        let sender = msgDiv.getAttribute('data-sender');
+        let existingBtn = msgDiv.querySelector('.btn-delete');
+        let messageId = msgDiv.getAttribute('id').replace('msg-', '');
+
+        if (currentUsername && sender === currentUsername) {
+          if (!existingBtn) {
+            let deleteBtn = document.createElement('button');
+            deleteBtn.className = "btn-delete";
+            deleteBtn.innerHTML = "🗑️";
+            deleteBtn.onclick = function() {
+              emitDelete(messageId, sender);
+            };
+            msgDiv.appendChild(deleteBtn);
+          }
+        } else {
+          if (existingBtn) existingBtn.remove();
+        }
+      });
+    }
+
+    function scrollToBottom() {
+      let msgBox = document.getElementById('messages');
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
+
+
