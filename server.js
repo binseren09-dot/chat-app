@@ -13,7 +13,12 @@ const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Mengizinkan akses lintas perangkat (HP & PC) tanpa diblokir CORS
+    methods: ["GET", "POST"]
+  }
+});
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -22,7 +27,8 @@ app.use(express.json());
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'rahasiasuper',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // Sesi bertahan 1 hari di HP
 });
 app.use(sessionMiddleware);
 
@@ -56,7 +62,7 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', UserSchema);
 
-// SCHEMA CHAT PERSONAL (Menyimpan Sender dan Receiver secara spesifik)
+// SCHEMA CHAT PERSONAL 
 const MessageSchema = new mongoose.Schema({
   sender: String,
   receiver: String,
@@ -87,6 +93,8 @@ app.get('/messages', async (req, res) => {
   if(!req.session.user) return res.status(401).json([]);
   const me = req.session.user.username;
   const target = req.query.with;
+
+  if(!target) return res.json([]);
 
   const messages = await Message.find({
     $or: [
@@ -135,24 +143,31 @@ app.post('/upload', upload.single('mediaFile'), (req, res) => {
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
-  // Ambil user dari session login
   const sessionUser = socket.request.session.user;
   
+  // Jika di session express sudah login, daftarkan otomatis ke map onlineUsers
+  if (sessionUser && sessionUser.username) {
+    socket.username = sessionUser.username;
+    onlineUsers.set(sessionUser.username, socket.id);
+    console.log(`[Session] ${sessionUser.username} terhubung dengan ID: ${socket.id}`);
+  }
+  
   socket.on('register user', (username) => {
+    if (!username) return;
     socket.username = username;
     onlineUsers.set(username, socket.id);
-    console.log(`${username} terhubung dengan ID: ${socket.id}`);
+    console.log(`[Manual] ${username} terhubung dengan ID: ${socket.id}`);
   });
 
-  // LOGIKA CHAT PERSONAL (PRIVATE MESSAGE)
-  socket.on('private message', async (data) => {
+  // LOGIKA CHAT PERSONAL (SINKRON DENGAN EVENT FRONTEND)
+  socket.on('chat message', async (data) => {
     const senderName = socket.username || (sessionUser ? sessionUser.username : null);
-    if (!senderName) return;
+    if (!senderName || !data.receiver) return;
 
     const msg = new Message({
       sender: senderName,
       receiver: data.receiver,
-      message: data.message,
+      message: data.message || "",
       fileUrl: data.fileUrl || null,
       fileType: data.fileType || null
     });
@@ -160,36 +175,37 @@ io.on('connection', (socket) => {
 
     const outputData = {
       _id: msg._id,
-      sender: senderName,
+      username: senderName, // Ubah ke penamaan 'username' agar sesuai fungsi appendMessageElement() di frontend
       receiver: data.receiver,
       message: data.message,
       fileUrl: msg.fileUrl,
       fileType: msg.fileType
     };
 
-    // Kirim ke pengirim (saya)
-    socket.emit('private message', outputData);
+    // Kirim ke diri sendiri (pengirim)
+    socket.emit('chat message', outputData);
 
-    // Kirim ke penerima (teman) jika dia sedang online
+    // Kirim ke penerima (jika target sedang online)
     const receiverSocketId = onlineUsers.get(data.receiver);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit('private message', outputData);
+      io.to(receiverSocketId).emit('chat message', outputData);
     }
   });
 
-  // LOGIKA HAPUS PESAN PERSONAL
+  // LOGIKA HAPUS PESAN
   socket.on('delete message', async (data) => {
     try {
       const msg = await Message.findById(data.messageId);
       if (!msg) return;
 
-      if (msg.sender === data.sender) {
+      // Memastikan penghapus adalah orang yang mengirim pesan tersebut
+      if (msg.sender === data.username || msg.sender === socket.username) {
         await Message.findByIdAndDelete(data.messageId);
         
-        // Infokan ke pengirim
+        // Kirim sinyal hapus ke pengirim
         socket.emit('message deleted', data.messageId);
         
-        // Infokan ke penerima jika online
+        // Kirim sinyal hapus ke penerima jika dia online
         const receiverSocketId = onlineUsers.get(msg.receiver);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit('message deleted', data.messageId);
@@ -203,11 +219,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if(socket.username) {
       onlineUsers.delete(socket.username);
-      console.log(`${socket.username} keluar`);
+      console.log(`${socket.username} keluar dari jaringan.`);
     }
   });
 });
 
+// Port 3000 dengan IP 0.0.0.0 agar bisa diakses oleh HP dalam satu Wi-Fi lewat IP PC Anda
 server.listen(3000, '0.0.0.0', () => {
   console.log('Server running on port 3000');
 });
