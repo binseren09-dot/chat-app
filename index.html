@@ -10,7 +10,7 @@
   <meta charset="UTF-8">
   <title>Chat App</title>
 
-  <  <style>
+  <style>
     body {
       font-family: Arial, sans-serif;
       background-image: url('https://unsplash.com');
@@ -39,7 +39,7 @@
     }
 
     .header {
-      background: #075e54;
+      background: #1877f2;
       color: white;
       padding: 15px;
       font-size: 20px;
@@ -54,41 +54,33 @@
       border-radius: 10px;
       font-size: 14px;
       flex-shrink: 0;
-      outline: none;
     }
 
     #messages {
       flex: 1;            
       overflow-y: auto;
       padding: 15px;
-      background: #efeae2;
+      background: #f0f2f5;
     }
 
     .message {
-      background: #ffffff;              
-      color: #000000;                   
-      padding: 8px 12px;
+      background: #000000;              
+      color: #ffffff;                   
+      padding: 10px 12px;
       margin: 8px 0;
       border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+      box-shadow: 0 1px 2px rgba(255,255,255,0.1); 
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
       max-width: 85%;    
       width: fit-content;
-    }
-
-    /* Membedakan warna balon chat milik sendiri agar mirip WA */
-    .message.my-message {
-      background: #d9fdd3;
-      margin-left: auto;
     }
 
     .message-content {
       flex: 1;
       word-break: break-word;
       font-size: 14px;
-      padding-right: 5px;
     }
 
     .message-content img, 
@@ -101,23 +93,13 @@
       display: block;
     }
 
-    /* Area informasi status centang di pojok bawah pesan */
-    .msg-meta {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 11px;
-      color: #667781;
-      white-space: nowrap;
-      margin-left: 10px;
-    }
-
     .btn-delete {
       background: none;
       border: none;
       cursor: pointer;
       font-size: 14px;
       padding: 0 5px;
+      margin-left: 10px;
       opacity: 0.6;
       transition: opacity 0.2s;
     }
@@ -130,22 +112,27 @@
       display: flex;
       padding: 12px;
       gap: 8px;
-      background: #f0f2f5;
+      background: white;
       align-items: center;
       flex-shrink: 0;
+      border-top: 1px solid #eee;
     }
 
     #msg {
       flex: 1;
       padding: 12px 15px;
-      border: 1px solid #fff;
+      border: 1px solid #ddd;
       border-radius: 20px;
       font-size: 14px;
       outline: none;
     }
 
+    #msg:focus {
+      border-color: #1877f2;
+    }
+
     button {
-      background: #00a884;
+      background: #1877f2;
       color: white;
       border: none;
       padding: 12px 18px;
@@ -164,28 +151,49 @@
     }
 
     @media (max-width: 600px) {
-      body { padding: 0; }
-      .chat-box { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; }
-      .header { padding: 12px 15px; font-size: 18px; }
-      #messages { padding: 10px; }
-      .message { max-width: 90%; }
-      .message-content img, .message-content video { width: 160px; }
-      .input-area { padding: 8px 10px; padding-bottom: env(safe-area-inset-bottom, 10px); }
-      #msg, button, .btn-attach { font-size: 16px; }
+      body {
+        padding: 0; 
+      }
+      .chat-box {
+        width: 100%;       
+        height: 100vh;     
+        max-height: 100vh;
+        border-radius: 0;  
+      }
+      .header {
+        padding: 12px 15px;
+        font-size: 18px;
+      }
+      #messages {
+        padding: 10px;     
+      }
+      .message {
+        max-width: 90%;    
+      }
+      .message-content img, 
+      .message-content video {
+        width: 160px;      
+      }
+      .input-area {
+        padding: 8px 10px; 
+        padding-bottom: env(safe-area-inset-bottom, 10px); 
+      }
+      #msg, button, .btn-attach {
+        font-size: 16px;   
+      }
     }
   </style>
-
 </head>
 <body>
 
   <div class="chat-box">
     <div class="header">
-      💬 WhatsApp Clone
-      <!-- Indikator mengetik di bawah teks judul -->
+      💬 Chat App
+      <!-- TEMPAT STRUKTUR TEKS INDIKATOR MENGETIK MUNCUL -->
       <div id="typing-status" style="font-size: 12px; font-weight: normal; color: #d1e7ff; margin-top: 2px; height: 14px;"></div>
     </div>
 
-    <input id="username" placeholder="Masukkan Username Anda" oninput="renderDeleteButtons()">
+    <input id="username" placeholder="Username" oninput="renderDeleteButtons()">
 
     <div id="messages"></div>
 
@@ -197,6 +205,7 @@
     </div>
   </div>
 
+  <!-- MEMUAT LIBRARY SOCKET.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io({
@@ -207,7 +216,6 @@
       randomizationFactor: 0.5
     });
 
-    // Minta izin push notification browser
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
@@ -232,7 +240,7 @@
           scrollToBottom();
           renderDeleteButtons();
         })
-        .catch(err => console.error("Gagal ambil pesan:", err));
+        .catch(err => console.error("Gagal mengambil pesan:", err));
     }
 
     fetchAllMessages();
@@ -245,6 +253,7 @@
     });
 
     socket.on('connect', () => {
+      console.log("Terhubung ke server chat!");
       let currentUsername = document.getElementById('username').value.trim();
       if (currentUsername) socket.emit('register user', currentUsername);
       fetchAllMessages();
@@ -265,20 +274,23 @@
       if (e.key === 'Enter') sendMsg();
     });
 
-    // Fitur Mengirim Sinyal Mengetik
+    // LOGIKA KIRIM STATUS KETIKAN KE SERVER
     let typingTimeout;
     document.getElementById('msg').addEventListener('input', () => {
       let username = document.getElementById('username').value.trim();
       socket.emit('typing', { sender: username, isTyping: true });
+
       clearTimeout(typingTimeout);
       typingTimeout = setTimeout(() => {
         socket.emit('typing', { sender: username, isTyping: false });
       }, 2000);
     });
 
+    // LOGIKA MENAMPILKAN STATUS KETIKAN DARI LAWAN BICARA
     socket.on('typing', (data) => {
       const typingStatusDiv = document.getElementById('typing-status');
       let currentUsername = document.getElementById('username').value.trim();
+
       if (data.sender !== currentUsername && data.isTyping) {
         typingStatusDiv.innerText = `${data.sender} sedang mengetik...`;
       } else {
@@ -297,7 +309,7 @@
       let formData = new FormData();
       formData.append('mediaFile', file);
 
-      document.getElementById('msg').placeholder = "Mengunggah... ⏳";
+      document.getElementById('msg').placeholder = "Sedang mengunggah... ⏳";
       document.getElementById('msg').disabled = true;
 
       fetch('/upload', { method: 'POST', body: formData })
@@ -311,6 +323,7 @@
         fileInput.value = ""; 
       })
       .catch(err => {
+        console.error(err);
         document.getElementById('msg').placeholder = "Ketik pesan...";
         document.getElementById('msg').disabled = false;
         alert("Gagal mengunggah media.");
@@ -318,20 +331,11 @@
       });
     }
 
-    // Pembuatan Balon Chat + Struktur Status Centang
     function appendMessageElement(data) {
       if (document.getElementById(`msg-${data._id}`)) return;
 
       let div = document.createElement('div');
-      let currentUsername = document.getElementById('username').value.trim();
-      
-      // Deteksi balon chat milik sendiri atau lawan bicara
-      if (data.username === currentUsername) {
-        div.className = "message my-message";
-      } else {
-        div.className = "message";
-      }
-      
+      div.className = "message";
       div.setAttribute('id', `msg-${data._id}`);
       div.setAttribute('data-sender', data.username);
 
@@ -349,36 +353,28 @@
           htmlContent += `<img src="${data.fileUrl}" style="max-width: 200px; border-radius: 10px; margin-top: 5px;" alt="Media">`;
         }
       }
+      
       contentSpan.innerHTML = htmlContent;
       div.appendChild(contentSpan);
 
-      // SISI CENTANG STATUS: Hanya dipasang jika pengirimnya adalah kita sendiri
-      if (data.username === currentUsername) {
-        let metaDiv = document.createElement('div');
-        metaDiv.className = "msg-meta";
-        metaDiv.innerHTML = `<span class="tick-status" id="tick-${data._id}">✓</span>`; // Default centang 1 (✓)
-        div.appendChild(metaDiv);
+      let currentUsername = document.getElementById('username').value.trim();
+      if (currentUsername && data.username === currentUsername) {
+        let deleteBtn = document.createElement('button');
+        deleteBtn.className = "btn-delete";
+        deleteBtn.innerHTML = "🗑️";
+        deleteBtn.onclick = function() { emitDelete(data._id, data.username); };
+        div.appendChild(deleteBtn);
       }
 
       document.getElementById('messages').appendChild(div);
     }
 
-    // Terima Pesan Real-time & Picu Notifikasi
     socket.on('chat message', (data) => {
       appendMessageElement(data);
       scrollToBottom();
       let currentUsername = document.getElementById('username').value.trim();
       if (data.username !== currentUsername) {
         showNotification(data);
-      }
-    });
-
-    // Pemicu Centang Dua (✓✓) Real-time dari Server
-    socket.on('message delivered', (messageId) => {
-      let tickElement = document.getElementById(`tick-${messageId}`);
-      if (tickElement) {
-        tickElement.innerText = "✓✓"; 
-        tickElement.style.color = "#53bdeb"; // Berubah biru langit khas WA asli
       }
     });
 
@@ -409,12 +405,11 @@
             deleteBtn.onclick = function() { emitDelete(messageId, sender); };
             msgDiv.appendChild(deleteBtn);
           }
-        } else {
-          if (existingBtn) existingBtn.remove();
-        }
+        } else { if (existingBtn) existingBtn.remove(); }
       });
     }
 
+    // Fungsi otomatisasi scroll ke bawah
     function scrollToBottom() {
       let msgBox = document.getElementById('messages');
       msgBox.scrollTop = msgBox.scrollHeight;
