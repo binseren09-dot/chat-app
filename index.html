@@ -10,7 +10,7 @@
   <meta charset="UTF-8">
   <title>Chat App</title>
 
-  <style>
+  <  <style>
     body {
       font-family: Arial, sans-serif;
       background-image: url('https://unsplash.com');
@@ -39,7 +39,7 @@
     }
 
     .header {
-      background: #1877f2;
+      background: #075e54;
       color: white;
       padding: 15px;
       font-size: 20px;
@@ -54,33 +54,41 @@
       border-radius: 10px;
       font-size: 14px;
       flex-shrink: 0;
+      outline: none;
     }
 
     #messages {
       flex: 1;            
       overflow-y: auto;
       padding: 15px;
-      background: #f0f2f5;
+      background: #efeae2;
     }
 
     .message {
-      background: #000000;              
-      color: #ffffff;                   
-      padding: 10px 12px;
+      background: #ffffff;              
+      color: #000000;                   
+      padding: 8px 12px;
       margin: 8px 0;
       border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(255,255,255,0.1); 
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       max-width: 85%;    
       width: fit-content;
+    }
+
+    /* Membedakan warna balon chat milik sendiri agar mirip WA */
+    .message.my-message {
+      background: #d9fdd3;
+      margin-left: auto;
     }
 
     .message-content {
       flex: 1;
       word-break: break-word;
       font-size: 14px;
+      padding-right: 5px;
     }
 
     .message-content img, 
@@ -93,13 +101,23 @@
       display: block;
     }
 
+    /* Area informasi status centang di pojok bawah pesan */
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: #667781;
+      white-space: nowrap;
+      margin-left: 10px;
+    }
+
     .btn-delete {
       background: none;
       border: none;
       cursor: pointer;
       font-size: 14px;
       padding: 0 5px;
-      margin-left: 10px;
       opacity: 0.6;
       transition: opacity 0.2s;
     }
@@ -112,27 +130,22 @@
       display: flex;
       padding: 12px;
       gap: 8px;
-      background: white;
+      background: #f0f2f5;
       align-items: center;
       flex-shrink: 0;
-      border-top: 1px solid #eee;
     }
 
     #msg {
       flex: 1;
       padding: 12px 15px;
-      border: 1px solid #ddd;
+      border: 1px solid #fff;
       border-radius: 20px;
       font-size: 14px;
       outline: none;
     }
 
-    #msg:focus {
-      border-color: #1877f2;
-    }
-
     button {
-      background: #1877f2;
+      background: #00a884;
       color: white;
       border: none;
       padding: 12px 18px;
@@ -150,86 +163,42 @@
       border-radius: 50%; 
     }
 
-    /* ==========================================
-       KODE KHUSUS UNTUK HP (LAYAR KECIL < 600px)
-       ========================================== */
     @media (max-width: 600px) {
-      body {
-        padding: 0; 
-      }
-
-      .chat-box {
-        width: 100%;       
-        height: 100vh;     
-        max-height: 100vh;
-        border-radius: 0;  
-      }
-
-      .header {
-        padding: 12px 15px;
-        font-size: 18px;
-      }
-
-      #messages {
-        padding: 10px;     
-      }
-
-      .message {
-        max-width: 90%;    
-      }
-
-      .message-content img, 
-      .message-content video {
-        width: 160px;      
-      }
-
-      .input-area {
-        padding: 8px 10px; 
-        padding-bottom: env(safe-area-inset-bottom, 10px); 
-      }
-      
-      #msg, button, .btn-attach {
-        font-size: 16px;   
-      }
+      body { padding: 0; }
+      .chat-box { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; }
+      .header { padding: 12px 15px; font-size: 18px; }
+      #messages { padding: 10px; }
+      .message { max-width: 90%; }
+      .message-content img, .message-content video { width: 160px; }
+      .input-area { padding: 8px 10px; padding-bottom: env(safe-area-inset-bottom, 10px); }
+      #msg, button, .btn-attach { font-size: 16px; }
     }
   </style>
+
 </head>
 <body>
 
   <div class="chat-box">
     <div class="header">
-      💬 Chat App
+      💬 WhatsApp Clone
+      <!-- Indikator mengetik di bawah teks judul -->
+      <div id="typing-status" style="font-size: 12px; font-weight: normal; color: #d1e7ff; margin-top: 2px; height: 14px;"></div>
     </div>
 
-    <input
-      id="username"
-      placeholder="Username"
-      oninput="renderDeleteButtons()"
-    >
+    <input id="username" placeholder="Masukkan Username Anda" oninput="renderDeleteButtons()">
 
     <div id="messages"></div>
 
     <div class="input-area">
       <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect()">
-      
       <button class="btn-attach" onclick="document.getElementById('file-input').click()">📎</button>
-
-      <input
-        id="msg"
-        placeholder="Ketik pesan..."
-        autocomplete="off"
-      >
-
-      <button onclick="sendMsg()">
-        ➤
-      </button>
+      <input id="msg" placeholder="Ketik pesan..." autocomplete="off">
+      <button onclick="sendMsg()">➤</button>
     </div>
   </div>
 
-  <!-- SCRIPT KONEKSI -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Konfigurasi Socket agar memaksa HP terhubung ulang secara agresif
     const socket = io({
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -238,46 +207,131 @@
       randomizationFactor: 0.5
     });
 
-    // Fungsi memuat ulang pesan dari server database
+    // Minta izin push notification browser
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    function showNotification(data) {
+      if (Notification.permission === "granted" && document.hidden) {
+        let bodyText = data.message || (data.fileType === 'video' ? '🎥 Mengirim video' : '📷 Mengirim foto');
+        const notif = new Notification(`Pesan dari ${data.username}`, {
+          body: bodyText,
+          icon: 'https://flaticon.com'
+        });
+        notif.onclick = () => { window.focus(); notif.close(); };
+      }
+    }
+
     function fetchAllMessages() {
-      document.getElementById('messages').innerHTML = ""; // Bersihkan kontainer sebelum memuat ulang
+      document.getElementById('messages').innerHTML = ""; 
       fetch('/messages')
         .then(res => res.json())
         .then(messages => {
-          messages.forEach(data => {
-            appendMessageElement(data);
-          });
+          messages.forEach(data => { appendMessageElement(data); });
           scrollToBottom();
           renderDeleteButtons();
         })
-        .catch(err => console.error("Gagal mengambil pesan:", err));
+        .catch(err => console.error("Gagal ambil pesan:", err));
     }
 
-    // Ambil data pertama kali dibuka
     fetchAllMessages();
 
-    // PERBAIKAN HP 1: Jika browser HP sempat mati/tertidur, ambil ulang pesan otomatis saat tab dibuka kembali
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        if (!socket.connected) {
-          socket.connect(); // Paksa koneksi aktif kembali jika terputus
-        }
-        fetchAllMessages(); // Ambil pesan terbaru yang tertinggal saat layar mati
+        if (!socket.connected) socket.connect();
+        fetchAllMessages();
       }
     });
 
-    // PERBAIKAN HP 2: Ambil ulang pesan otomatis ketika jaringan HP terputus lalu tersambung lagi
     socket.on('connect', () => {
-      console.log("Terhubung ke server chat!");
+      let currentUsername = document.getElementById('username').value.trim();
+      if (currentUsername) socket.emit('register user', currentUsername);
       fetchAllMessages();
     });
 
+    function sendMsg() {
+      let username = document.getElementById('username').value.trim();
+      let msg = document.getElementById('msg').value.trim();
+
+      if(username === "") { alert("Isi username terlebih dahulu"); return; }
+      if(msg === "") return;
+
+      socket.emit('chat message', { username: username, message: msg });
+      document.getElementById('msg').value = "";
+    }
+
+    document.getElementById('msg').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMsg();
+    });
+
+    // Fitur Mengirim Sinyal Mengetik
+    let typingTimeout;
+    document.getElementById('msg').addEventListener('input', () => {
+      let username = document.getElementById('username').value.trim();
+      socket.emit('typing', { sender: username, isTyping: true });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('typing', { sender: username, isTyping: false });
+      }, 2000);
+    });
+
+    socket.on('typing', (data) => {
+      const typingStatusDiv = document.getElementById('typing-status');
+      let currentUsername = document.getElementById('username').value.trim();
+      if (data.sender !== currentUsername && data.isTyping) {
+        typingStatusDiv.innerText = `${data.sender} sedang mengetik...`;
+      } else {
+        typingStatusDiv.innerText = "";
+      }
+    });
+
+    function handleFileSelect() {
+      let fileInput = document.getElementById('file-input');
+      let username = document.getElementById('username').value.trim();
+
+      if (username === "") { alert("Isi username terlebih dahulu!"); fileInput.value = ""; return; }
+      if (fileInput.files.length === 0) return;
+
+      let file = fileInput.files[0];
+      let formData = new FormData();
+      formData.append('mediaFile', file);
+
+      document.getElementById('msg').placeholder = "Mengunggah... ⏳";
+      document.getElementById('msg').disabled = true;
+
+      fetch('/upload', { method: 'POST', body: formData })
+      .then(res => res.json())
+      .then(result => {
+        document.getElementById('msg').placeholder = "Ketik pesan...";
+        document.getElementById('msg').disabled = false;
+        if(result.fileUrl) {
+          socket.emit('chat message', { username: username, message: "", fileUrl: result.fileUrl, fileType: result.fileType });
+        }
+        fileInput.value = ""; 
+      })
+      .catch(err => {
+        document.getElementById('msg').placeholder = "Ketik pesan...";
+        document.getElementById('msg').disabled = false;
+        alert("Gagal mengunggah media.");
+        fileInput.value = "";
+      });
+    }
+
+    // Pembuatan Balon Chat + Struktur Status Centang
     function appendMessageElement(data) {
-      // Mencegah duplikasi elemen jika id pesan sudah ada di layar
       if (document.getElementById(`msg-${data._id}`)) return;
 
       let div = document.createElement('div');
-      div.className = "message";
+      let currentUsername = document.getElementById('username').value.trim();
+      
+      // Deteksi balon chat milik sendiri atau lawan bicara
+      if (data.username === currentUsername) {
+        div.className = "message my-message";
+      } else {
+        div.className = "message";
+      }
+      
       div.setAttribute('id', `msg-${data._id}`);
       div.setAttribute('data-sender', data.username);
 
@@ -285,9 +339,7 @@
       contentSpan.className = "message-content";
       
       let htmlContent = `<b>${data.username}:</b> `;
-      if (data.message) {
-        htmlContent += `${data.message}`;
-      }
+      if (data.message) htmlContent += `${data.message}`;
 
       if (data.fileUrl) {
         if (data.message) htmlContent += `<br>`;
@@ -297,98 +349,37 @@
           htmlContent += `<img src="${data.fileUrl}" style="max-width: 200px; border-radius: 10px; margin-top: 5px;" alt="Media">`;
         }
       }
-      
       contentSpan.innerHTML = htmlContent;
       div.appendChild(contentSpan);
 
-      let currentUsername = document.getElementById('username').value.trim();
-      if (currentUsername && data.username === currentUsername) {
-        let deleteBtn = document.createElement('button');
-        deleteBtn.className = "btn-delete";
-        deleteBtn.innerHTML = "🗑️";
-        deleteBtn.onclick = function() {
-          emitDelete(data._id, data.username);
-        };
-        div.appendChild(deleteBtn);
+      // SISI CENTANG STATUS: Hanya dipasang jika pengirimnya adalah kita sendiri
+      if (data.username === currentUsername) {
+        let metaDiv = document.createElement('div');
+        metaDiv.className = "msg-meta";
+        metaDiv.innerHTML = `<span class="tick-status" id="tick-${data._id}">✓</span>`; // Default centang 1 (✓)
+        div.appendChild(metaDiv);
       }
 
       document.getElementById('messages').appendChild(div);
     }
 
-    function sendMsg() {
-      let username = document.getElementById('username').value.trim();
-      let msg = document.getElementById('msg').value.trim();
-
-      if(username === "") {
-        alert("Isi username terlebih dahulu");
-        return;
-      }
-      if(msg === "") return;
-
-      socket.emit('chat message', {
-        username: username,
-        message: msg
-      });
-
-      document.getElementById('msg').value = "";
-    }
-
-    // PERBAIKAN HP 3: Mengirim pesan lewat keyboard HP menggunakan tombol Enter / Go
-    document.getElementById('msg').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        sendMsg();
-      }
-    });
-
-    function handleFileSelect() {
-      let fileInput = document.getElementById('file-input');
-      let username = document.getElementById('username').value.trim();
-
-      if (username === "") {
-        alert("Isi username terlebih dahulu sebelum memilih file");
-        fileInput.value = "";
-        return;
-      }
-      if (fileInput.files.length === 0) return;
-
-      let file = fileInput.files[0];
-      let formData = new FormData();
-      formData.append('mediaFile', file);
-
-      document.getElementById('msg').placeholder = "Sedang mengunggah... ⏳";
-      document.getElementById('msg').disabled = true;
-
-      fetch('/upload', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => res.json())
-      .then(result => {
-        document.getElementById('msg').placeholder = "Ketik pesan...";
-        document.getElementById('msg').disabled = false;
-        
-        if(result.fileUrl) {
-          socket.emit('chat message', {
-            username: username,
-            message: "", 
-            fileUrl: result.fileUrl,
-            fileType: result.fileType
-          });
-        }
-        fileInput.value = ""; 
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('msg').placeholder = "Ketik pesan...";
-        document.getElementById('msg').disabled = false;
-        alert("Gagal mengunggah media.");
-        fileInput.value = "";
-      });
-    }
-
+    // Terima Pesan Real-time & Picu Notifikasi
     socket.on('chat message', (data) => {
       appendMessageElement(data);
       scrollToBottom();
+      let currentUsername = document.getElementById('username').value.trim();
+      if (data.username !== currentUsername) {
+        showNotification(data);
+      }
+    });
+
+    // Pemicu Centang Dua (✓✓) Real-time dari Server
+    socket.on('message delivered', (messageId) => {
+      let tickElement = document.getElementById(`tick-${messageId}`);
+      if (tickElement) {
+        tickElement.innerText = "✓✓"; 
+        tickElement.style.color = "#53bdeb"; // Berubah biru langit khas WA asli
+      }
     });
 
     function emitDelete(messageId, username) {
@@ -399,15 +390,12 @@
 
     socket.on('message deleted', (messageId) => {
       let msgElement = document.getElementById(`msg-${messageId}`);
-      if (msgElement) {
-        msgElement.remove();
-      }
+      if (msgElement) msgElement.remove();
     });
 
     function renderDeleteButtons() {
       let currentUsername = document.getElementById('username').value.trim();
       let allMessages = document.querySelectorAll('.message');
-
       allMessages.forEach(msgDiv => {
         let sender = msgDiv.getAttribute('data-sender');
         let existingBtn = msgDiv.querySelector('.btn-delete');
@@ -418,9 +406,7 @@
             let deleteBtn = document.createElement('button');
             deleteBtn.className = "btn-delete";
             deleteBtn.innerHTML = "🗑️";
-            deleteBtn.onclick = function() {
-              emitDelete(messageId, sender);
-            };
+            deleteBtn.onclick = function() { emitDelete(messageId, sender); };
             msgDiv.appendChild(deleteBtn);
           }
         } else {
