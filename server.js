@@ -50,7 +50,6 @@ const storage = new CloudinaryStorage({
   },
 });
 const upload = multer({ storage: storage });
-
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/chatapp')
 .then(() => console.log("MongoDB Connected 🔥"))
 .catch((err) => console.log("MongoDB Error:", err));
@@ -138,13 +137,13 @@ app.post('/upload', upload.single('mediaFile'), (req, res) => {
   const isVideo = req.file.mimetype.startsWith('video');
   res.json({ fileUrl: req.file.path, fileType: isVideo ? 'video' : 'image' });
 });
-
 // MAP UNTUK MENYIMPAN ID SOCKET USER YANG SEDANG ONLINE
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
   const sessionUser = socket.request.session.user;
   
+  // Jika di session express sudah login, daftarkan otomatis ke map onlineUsers
   if (sessionUser && sessionUser.username) {
     socket.username = sessionUser.username;
     onlineUsers.set(sessionUser.username, socket.id);
@@ -158,7 +157,7 @@ io.on('connection', (socket) => {
     console.log(`[Manual] ${username} terhubung dengan ID: ${socket.id}`);
   });
 
-  // LOGIKA MANAJEMEN CHAT & DISTRIBUSI CENTANG DUA
+  // LOGIKA MANAJEMEN CHAT & DISTRIBUSI PESAN
   socket.on('chat message', async (data) => {
     const senderName = socket.username || (sessionUser ? sessionUser.username : null);
     if (!senderName) return;
@@ -174,7 +173,7 @@ io.on('connection', (socket) => {
 
     const outputData = {
       _id: msg._id,
-      username: senderName, 
+      username: senderName, // Menyamakan nama properti agar terbaca fungsi appendMessageElement() di client
       message: data.message,
       fileUrl: msg.fileUrl,
       fileType: msg.fileType
@@ -187,18 +186,16 @@ io.on('connection', (socket) => {
     onlineUsers.forEach((socketId, namaUser) => {
       if (namaUser !== senderName) {
         io.to(socketId).emit('chat message', outputData);
-        
-        // Target sukses menerima data -> perintahkan HP pengirim ubah ikon jadi Centang Dua (✓✓)
-        socket.emit('message delivered', msg._id);
       }
     });
   });
 
-  // LOGIKA "SEDANG MENGETIK..."
+  // LOGIKA BROADCAST STATUS MENGETIK (BARU)
   socket.on('typing', (data) => {
     const senderName = socket.username || (sessionUser ? sessionUser.username : null);
     if (!senderName) return;
 
+    // Server otomatis menyebarkan sinyal mengetik ke semua user lain yang online
     onlineUsers.forEach((socketId, namaUser) => {
       if (namaUser !== senderName) {
         io.to(socketId).emit('typing', { sender: senderName, isTyping: data.isTyping });
@@ -212,10 +209,14 @@ io.on('connection', (socket) => {
       const msg = await Message.findById(data.messageId);
       if (!msg) return;
 
+      // Memastikan penghapus adalah orang yang mengirim pesan tersebut
       if (msg.sender === data.username || msg.sender === socket.username) {
         await Message.findByIdAndDelete(data.messageId);
+        
+        // Kirim sinyal hapus ke pengirim
         socket.emit('message deleted', data.messageId);
         
+        // Kirim sinyal hapus ke penerima jika dia online
         const receiverSocketId = onlineUsers.get(msg.receiver);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit('message deleted', data.messageId);
@@ -234,8 +235,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Jalankan server pada Port 3000
+// Port 3000 dengan IP 0.0.0.0 agar bisa diakses oleh HP dalam satu Wi-Fi lewat IP PC Anda
 server.listen(3000, '0.0.0.0', () => {
   console.log('Server running on port 3000');
 });
-
