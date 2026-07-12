@@ -145,7 +145,6 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   const sessionUser = socket.request.session.user;
   
-  // Jika di session express sudah login, daftarkan otomatis ke map onlineUsers
   if (sessionUser && sessionUser.username) {
     socket.username = sessionUser.username;
     onlineUsers.set(sessionUser.username, socket.id);
@@ -159,14 +158,14 @@ io.on('connection', (socket) => {
     console.log(`[Manual] ${username} terhubung dengan ID: ${socket.id}`);
   });
 
-  // LOGIKA CHAT PERSONAL (SINKRON DENGAN EVENT FRONTEND)
+  // LOGIKA MANAJEMEN CHAT & DISTRIBUSI CENTANG DUA
   socket.on('chat message', async (data) => {
     const senderName = socket.username || (sessionUser ? sessionUser.username : null);
-    if (!senderName || !data.receiver) return;
+    if (!senderName) return;
 
     const msg = new Message({
       sender: senderName,
-      receiver: data.receiver,
+      receiver: data.receiver || "GlobalChat", 
       message: data.message || "",
       fileUrl: data.fileUrl || null,
       fileType: data.fileType || null
@@ -175,21 +174,36 @@ io.on('connection', (socket) => {
 
     const outputData = {
       _id: msg._id,
-      username: senderName, // Ubah ke penamaan 'username' agar sesuai fungsi appendMessageElement() di frontend
-      receiver: data.receiver,
+      username: senderName, 
       message: data.message,
       fileUrl: msg.fileUrl,
       fileType: msg.fileType
     };
 
-    // Kirim ke diri sendiri (pengirim)
+    // 1. Tampilkan di layar kita sendiri (Secara bawaan berstatus Centang 1)
     socket.emit('chat message', outputData);
 
-    // Kirim ke penerima (jika target sedang online)
-    const receiverSocketId = onlineUsers.get(data.receiver);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit('chat message', outputData);
-    }
+    // 2. Teruskan pesan ke semua orang yang online, lalu beri sinyal centang dua ke pengirim
+    onlineUsers.forEach((socketId, namaUser) => {
+      if (namaUser !== senderName) {
+        io.to(socketId).emit('chat message', outputData);
+        
+        // Target sukses menerima data -> perintahkan HP pengirim ubah ikon jadi Centang Dua (✓✓)
+        socket.emit('message delivered', msg._id);
+      }
+    });
+  });
+
+  // LOGIKA "SEDANG MENGETIK..."
+  socket.on('typing', (data) => {
+    const senderName = socket.username || (sessionUser ? sessionUser.username : null);
+    if (!senderName) return;
+
+    onlineUsers.forEach((socketId, namaUser) => {
+      if (namaUser !== senderName) {
+        io.to(socketId).emit('typing', { sender: senderName, isTyping: data.isTyping });
+      }
+    });
   });
 
   // LOGIKA HAPUS PESAN
@@ -198,14 +212,10 @@ io.on('connection', (socket) => {
       const msg = await Message.findById(data.messageId);
       if (!msg) return;
 
-      // Memastikan penghapus adalah orang yang mengirim pesan tersebut
       if (msg.sender === data.username || msg.sender === socket.username) {
         await Message.findByIdAndDelete(data.messageId);
-        
-        // Kirim sinyal hapus ke pengirim
         socket.emit('message deleted', data.messageId);
         
-        // Kirim sinyal hapus ke penerima jika dia online
         const receiverSocketId = onlineUsers.get(msg.receiver);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit('message deleted', data.messageId);
@@ -224,7 +234,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Port 3000 dengan IP 0.0.0.0 agar bisa diakses oleh HP dalam satu Wi-Fi lewat IP PC Anda
+// Jalankan server pada Port 3000
 server.listen(3000, '0.0.0.0', () => {
   console.log('Server running on port 3000');
 });
+
