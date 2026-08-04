@@ -1,6 +1,8 @@
 body {
   font-family: Arial, sans-serif;
-  background-image: url('https://unsplash.com'); /* Link sampel solid */
+  /* PERBAIKAN: Menggunakan tautan gambar latar belakang solid dari Unsplash */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), 
+                    url('https://unsplash.com');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -51,25 +53,41 @@ body {
   flex-shrink: 0;
 }
 
+/* PERBAIKAN: Mengatur susunan container utama pesan menjadi vertikal ke bawah */
 #messages {
   flex: 1;            
   overflow-y: auto;
   padding: 15px;
   background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Elemen Dasar Bubble Chat */
 .message {
-  background: #000000;              
-  color: #ffffff;                   
   padding: 10px 12px;
-  margin: 8px 0;
+  margin: 6px 0;
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(255,255,255,0.1); 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
   display: flex;
   justify-content: space-between;
   align-items: center;
   max-width: 85%;    
   width: fit-content;
+}
+
+/* SINKRONISASI JAVASCRIPT: Gaya Pesan Masuk (Lawan Bicara) */
+.message.incoming {
+  background: #000000;              
+  color: #ffffff; 
+  align-self: flex-start; /* Sebelah Kiri */
+}
+
+/* SINKRONISASI JAVASCRIPT: Gaya Pesan Keluar (Diri Sendiri) */
+.message.outgoing {
+  background: #1877f2;              
+  color: #ffffff; 
+  align-self: flex-end; /* Sebelah Kanan */
 }
 
 .message-content {
