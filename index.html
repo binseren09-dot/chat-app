@@ -1,41 +1,54 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <!-- META ANTI-CACHE: Memaksa browser HP selalu memuat pesan terbaru -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Chat App</title>
-  <!-- Menghubungkan ke file CSS eksternal -->
+  <title>Modern Chat App</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="chat-box">
-    <div class="header">
-      💬 Chat App
-      <!-- Tempat teks indikator mengetik muncul -->
-      <div id="typing-status"></div>
+  <div class="chat-container">
+    <!-- PANEL KIRI: Menu Pengaturan Profil -->
+    <div class="profile-panel">
+      <h3>Profil Saya</h3>
+      <div class="avatar-selection">
+        <!-- Avatar Utama yang Aktif -->
+        <img id="current-avatar" src="https://dicebear.com" alt="Avatar">
+        <p>Pilih Karakter:</p>
+        <div class="avatar-options">
+          <img class="avatar-opt active" src="https://dicebear.com" onclick="changeAvatar('User1')">
+          <img class="avatar-opt" src="https://dicebear.com" onclick="changeAvatar('Alex')">
+          <img class="avatar-opt" src="https://dicebear.com" onclick="changeAvatar('Mia')">
+          <img class="avatar-opt" src="https://dicebear.com" onclick="changeAvatar('Leo')">
+        </div>
+      </div>
+      <input id="username" placeholder="Masukkan Username..." oninput="renderDeleteButtons()">
     </div>
 
-    <!-- Kolom input nama pengguna -->
-    <input id="username" placeholder="Username" oninput="renderDeleteButtons()">
+    <!-- PANEL KANAN: Ruang Obrolan Chat -->
+    <div class="chat-box">
+      <div class="header">
+        <div class="header-info">
+          <span class="room-title">💬 Ruang Obrolan</span>
+          <div id="typing-status"></div>
+        </div>
+      </div>
 
-    <!-- Wadah pesan chat -->
-    <div id="messages"></div>
+      <div id="messages"></div>
 
-    <!-- Area input pesan dan file -->
-    <div class="input-area">
-      <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect()">
-      <button class="btn-attach" onclick="document.getElementById('file-input').click()">📎</button>
-      <input id="msg" placeholder="Ketik pesan..." autocomplete="off">
-      <button onclick="sendMsg()">➤</button>
+      <div class="input-area">
+        <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect()">
+        <button class="btn-attach" onclick="document.getElementById('file-input').click()">📎</button>
+        <input id="msg" placeholder="Ketik pesan di sini..." autocomplete="off">
+        <button class="btn-send" onclick="sendMsg()">➤</button>
+      </div>
     </div>
   </div>
 
-  <!-- Memuat library Socket.io dan file Javascript eksternal -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
