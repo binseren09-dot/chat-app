@@ -1,4 +1,6 @@
-// Inisialisasi Socket.io dengan opsi auto-reconnect
+// ==========================================================================
+// 1. KONEKSI SOCKET.IO & PENGATURAN IZIN NOTIFIKASI MELAYANG
+// ==========================================================================
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
@@ -7,24 +9,49 @@ const socket = io({
   randomizationFactor: 0.5
 });
 
-// Meminta izin notifikasi browser
-if ("Notification" in window && Notification.permission !== "granted") {
-  Notification.requestPermission();
-}
-
-// Fungsi menampilkan notifikasi push saat tab sedang tidak dibuka
-function showNotification(data) {
-  if (Notification.permission === "granted" && document.hidden) {
-    let bodyText = data.message || (data.fileType === 'video' ? '🎥 Mengirim video' : '📷 Mengirim foto');
-    const notif = new Notification(`Pesan dari ${data.username}`, {
-      body: bodyText,
-      icon: 'https://flaticon.com'
+// Meminta izin Notifikasi Melayang dari browser tepat saat aplikasi dimuat
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission !== "granted") {
+    Notification.requestPermission().then(permission => {
+      console.log("Status izin notifikasi melayang:", permission);
     });
-    notif.onclick = () => { window.focus(); notif.close(); };
+  }
+}
+requestNotificationPermission();
+
+// Fungsi memicu munculnya kotak notifikasi melayang di sistem operasi (PC / HP)
+function showNotification(data) {
+  let currentUsername = document.getElementById('username').value.trim();
+  
+  // SYARAT MUTLAK: Izin aktif, tab sedang ditutup/di-background, dan BUKAN pesan milik sendiri
+  if (Notification.permission === "granted" && document.hidden && data.username !== currentUsername) {
+    
+    // Menentukan isi ringkasan teks pop-up melayang
+    let bodyText = data.message;
+    if (!bodyText) {
+      bodyText = data.fileType === 'video' ? '🎥 Mengirim video' : '📷 Mengirim foto';
+    }
+    
+    const notif = new Notification(`Pesan baru dari ${data.username}`, {
+      body: bodyText,
+      icon: 'https://flaticon.com', // Menggunakan ikon lonceng valid agar tidak diblokir sistem
+      tag: 'chat-app-message' // Menggabungkan tumpukan pop-up agar tidak memenuhi layar pengguna
+    });
+
+    // Jika notifikasi melayang diklik, arahkan pengguna kembali masuk ke tab chat
+    notif.onclick = (e) => { 
+      e.preventDefault();
+      window.focus(); 
+      notif.close(); 
+    };
   }
 }
 
-// Fungsi memuat ulang seluruh database pesan dari server
+// ==========================================================================
+// 2. MANAGEMENT SYNC DATA DAN PENGIRIMAN PESAN
+// ==========================================================================
+
+// Fungsi mengambil seluruh riwayat chat lama dari database backend Anda
 function fetchAllMessages() {
   document.getElementById('messages').innerHTML = ""; 
   fetch('/messages')
@@ -34,13 +61,13 @@ function fetchAllMessages() {
       scrollToBottom();
       renderDeleteButtons();
     })
-    .catch(err => console.error("Gagal mengambil pesan:", err));
+    .catch(err => console.error("Gagal mengambil database pesan:", err));
 }
 
-// Jalankan pengambilan data pertama kali saat aplikasi dibuka
+// Jalankan penarikan data pertama kali saat web dimuat
 fetchAllMessages();
 
-// Mengecek jika layar kembali aktif dari background hp
+// Memaksa browser HP menarik ulang data jika pengguna kembali membuka layar utama aplikasi
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (!socket.connected) socket.connect();
@@ -55,15 +82,17 @@ socket.on('connect', () => {
   fetchAllMessages();
 });
 
-// Menerima pesan teks atau file baru dari socket server
+// Menerima pesan teks atau media file realtime dari Socket server
 socket.on('chat message', (data) => {
   appendMessageElement(data);
   scrollToBottom();
   renderDeleteButtons();
+  
+  // Pemicu Notifikasi Melayang otomatis
   showNotification(data);
 });
 
-// Fungsi untuk mengirim pesan teks biasa
+// Fungsi memproses pengiriman pesan teks biasa
 function sendMsg() {
   let username = document.getElementById('username').value.trim();
   let msg = document.getElementById('msg').value.trim();
@@ -79,7 +108,9 @@ document.getElementById('msg').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') sendMsg();
 });
 
-// Logika mendeteksi status ketikan (Typing Indicator)
+// ==========================================================================
+// 3. LOGIKA INDIKATOR STATUS mengetik (TYPING INDICATOR)
+// ==========================================================================
 let typingTimeout;
 document.getElementById('msg').addEventListener('input', () => {
   let username = document.getElementById('username').value.trim();
@@ -93,7 +124,6 @@ document.getElementById('msg').addEventListener('input', () => {
   }, 2000);
 });
 
-// Menampilkan indikator jika lawan bicara sedang mengetik
 socket.on('typing', (data) => {
   const typingStatusDiv = document.getElementById('typing-status');
   let currentUsername = document.getElementById('username').value.trim();
@@ -105,7 +135,9 @@ socket.on('typing', (data) => {
   }
 });
 
-// LANJUTAN KODE YANG TERPOTONG: Menangani unggahan file (Gambar/Video)
+// ==========================================================================
+// 4. PEMBACAAN DAN UNGGAHAN FILE MEDIA (IMAGE/VIDEO)
+// ==========================================================================
 function handleFileSelect() {
   let fileInput = document.getElementById('file-input');
   let username = document.getElementById('username').value.trim();
@@ -114,34 +146,42 @@ function handleFileSelect() {
   if (username === "") { alert("Isi username terlebih dahulu!"); fileInput.value = ""; return; }
   if (!file) return;
 
-  let fileType = file.type.split('/')[0]; // Mendeteksi 'image' atau 'video'
+  let fileType = file.type.split('/')[0]; // Mendeteksi pay-load berupa 'image' atau 'video'
   let reader = new FileReader();
 
   reader.onload = function(e) {
     let base64Data = e.target.result;
     
-    // Kirim objek file ke server lewat Socket
+    // Kirim objek string media Base64 langsung ke server lewat jalur Socket
     socket.emit('chat message', {
       username: username,
-      message: "", // Teks kosong karena mengirim media
+      message: "", 
       fileData: base64Data,
       fileType: fileType
     });
     
-    fileInput.value = ""; // Reset form file input setelah terkirim
+    fileInput.value = ""; // Bersihkan form file input setelah berhasil dilempar
   };
 
-  reader.readAsDataURL(file); // Konversi file biner ke string Base64
+  reader.readAsDataURL(file); 
 }
 
-// Fungsi untuk menyusun tampilan bubble chat
+// ==========================================================================
+// 5. MANIPULASI TAMPILAN BUBBLE CHAT (SINKRONISASI KANAN-KIRI)
+// ==========================================================================
 function appendMessageElement(data) {
   const messagesDiv = document.getElementById('messages');
   const messageElement = document.createElement('div');
   messageElement.classList.add('message');
-  
-  // Penanda atribut data-sender untuk logika tombol hapus
   messageElement.setAttribute('data-sender', data.username);
+
+  // LOGIKA SINKRONISASI CSS BARU: Memisahkan letak perataan kanan/kiri chat
+  let currentUsername = document.getElementById('username').value.trim();
+  if (currentUsername !== "" && data.username === currentUsername) {
+    messageElement.classList.add('outgoing'); // Pesan Anda sendiri, melompat ke KANAN (Biru)
+  } else {
+    messageElement.classList.add('incoming'); // Pesan masuk orang lain, menetap di KIRI (Hitam)
+  }
 
   let contentHtml = `<div class="message-content"><strong>${data.username}:</strong> `;
   
@@ -156,14 +196,14 @@ function appendMessageElement(data) {
   }
   contentHtml += `</div>`;
   
-  // Tambahkan tombol hapus (default disembunyikan lewat renderDeleteButtons)
+  // Memasang tombol hapus bertanda id data dari database backend Anda
   contentHtml += `<button class="btn-delete" onclick="deleteMessage('${data.id || data._id}')" style="display:none;">🗑️</button>`;
   
   messageElement.innerHTML = contentHtml;
   messagesDiv.appendChild(messageElement);
 }
 
-// Fungsi menampilkan tombol hapus HANYA jika username sesuai pemilik pesan
+// Fungsi memeriksa dan meremajakan tombol hapus dan posisi secara dinamis sewaktu-waktu kolom username diedit
 function renderDeleteButtons() {
   let currentUsername = document.getElementById('username').value.trim();
   let allMessages = document.querySelectorAll('.message');
@@ -171,25 +211,29 @@ function renderDeleteButtons() {
   allMessages.forEach(msg => {
     let sender = msg.getAttribute('data-sender');
     let deleteBtn = msg.querySelector('.btn-delete');
-    if (deleteBtn) {
-      if (currentUsername !== "" && currentUsername === sender) {
-        deleteBtn.style.display = "block";
-      } else {
-        deleteBtn.style.display = "none";
-      }
+    
+    if (currentUsername !== "" && currentUsername === sender) {
+      msg.classList.remove('incoming');
+      msg.classList.add('outgoing'); // Ubah ke kanan
+      if (deleteBtn) deleteBtn.style.display = "block";
+    } else {
+      msg.classList.remove('outgoing');
+      msg.classList.add('incoming'); // Ubah ke kiri
+      if (deleteBtn) deleteBtn.style.display = "none";
     }
   });
 }
 
-// Kerangka fungsi hapus pesan (bisa disesuaikan dengan rute API backend Anda)
+// Mengirim instruksi hapus pesan ke server API backend Anda
 function deleteMessage(messageId) {
   if (confirm("Hapus pesan ini?")) {
     fetch(`/messages/${messageId}`, { method: 'DELETE' })
       .then(() => fetchAllMessages())
-      .catch(err => console.error("Gagal menghapus:", err));
+      .catch(err => console.error("Gagal melakukan instruksi hapus:", err));
   }
 }
 
+// Otomatisasi gulir halaman ke bawah agar pesan paling baru selalu terlihat langsung
 function scrollToBottom() {
   const messagesDiv = document.getElementById('messages');
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
