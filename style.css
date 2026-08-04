@@ -1,0 +1,181 @@
+body {
+  font-family: Arial, sans-serif;
+  background-image: url('https://unsplash.com'); /* Link sampel solid */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.chat-box {
+  width: 450px;       
+  height: 80vh;       
+  max-height: 700px;  
+  background: rgba(255, 255, 255, 0.95); 
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column; 
+  overflow: hidden;
+}
+
+.header {
+  background: #1877f2;
+  color: white;
+  padding: 15px;
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+#typing-status {
+  font-size: 12px; 
+  font-weight: normal; 
+  color: #d1e7ff; 
+  margin-top: 2px; 
+  height: 14px;
+}
+
+#username {
+  margin: 10px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#messages {
+  flex: 1;            
+  overflow-y: auto;
+  padding: 15px;
+  background: #f0f2f5;
+}
+
+.message {
+  background: #000000;              
+  color: #ffffff;                   
+  padding: 10px 12px;
+  margin: 8px 0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(255,255,255,0.1); 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 85%;    
+  width: fit-content;
+}
+
+.message-content {
+  flex: 1;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+.message-content img, 
+.message-content video {
+  max-width: 100%;    
+  width: 200px;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 5px;
+  display: block;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 5px;
+  margin-left: 10px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  color: #ff4d4d;
+}
+
+.btn-delete:hover {
+  opacity: 1;
+}
+
+.input-area {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  background: white;
+  align-items: center;
+  flex-shrink: 0;
+  border-top: 1px solid #eee;
+}
+
+#msg {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+}
+
+#msg:focus {
+  border-color: #1877f2;
+}
+
+button {
+  background: #1877f2;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.btn-attach {
+  background: #e4e6eb;
+  color: #050505;
+  font-size: 18px;
+  padding: 10px 14px;
+  border-radius: 50%; 
+}
+
+/* Pengaturan tampilan layar HP */
+@media (max-width: 600px) {
+  body {
+    padding: 0; 
+  }
+  .chat-box {
+    width: 100%;       
+    height: 100vh;     
+    max-height: 100vh;
+    border-radius: 0;  
+  }
+  .header {
+    padding: 12px 15px;
+    font-size: 18px;
+  }
+  #messages {
+    padding: 10px;     
+  }
+  .message {
+    max-width: 90%;    
+  }
+  .message-content img, 
+  .message-content video {
+    width: 160px;      
+  }
+  .input-area {
+    padding: 8px 10px; 
+    padding-bottom: env(safe-area-inset-bottom, 10px); 
+  }
+  #msg, button, .btn-attach {
+    font-size: 16px;   
+  }
+}
