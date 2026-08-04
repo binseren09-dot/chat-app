@@ -6,17 +6,17 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="UTF-8">
-  <title>Modern Chat App</title>
+  <title>Modern Chat App with Themes</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<!-- Default menggunakan tema cyberpunk -->
+<body class="theme-cyberpunk">
 
   <div class="chat-container">
-    <!-- PANEL KIRI: Menu Pengaturan Profil -->
+    <!-- PANEL KIRI: Menu Pengaturan Profil & Tema -->
     <div class="profile-panel">
       <h3>Profil Saya</h3>
       <div class="avatar-selection">
-        <!-- Avatar Utama yang Aktif -->
         <img id="current-avatar" src="https://dicebear.com" alt="Avatar">
         <p>Pilih Karakter:</p>
         <div class="avatar-options">
@@ -27,6 +27,16 @@
         </div>
       </div>
       <input id="username" placeholder="Masukkan Username..." oninput="renderDeleteButtons()">
+
+      <!-- TAMBAHAN: Menu Pilihan Tema -->
+      <div class="theme-selection">
+        <h4>Pilih Tema</h4>
+        <div class="theme-buttons">
+          <button class="btn-theme active" onclick="setTheme('cyberpunk')">🎨 Cyberpunk</button>
+          <button class="btn-theme" onclick="setTheme('midnight')">🌌 Midnight</button>
+          <button class="btn-theme" onclick="setTheme('forest')">🌿 Forest Mint</button>
+        </div>
+      </div>
     </div>
 
     <!-- PANEL KANAN: Ruang Obrolan Chat -->
